@@ -1,6 +1,6 @@
 # Stock Checker and Notifier
 # 
-# Created by hugoender 2020
+# Created by Hugo Garcia 2020
 # With the help of the following article:
 # https://medium.com/better-programming/lets-create-an-instagram-bot-to-show-you-the-power-of-selenium-349d7a6744f7
 
@@ -22,9 +22,9 @@ class HaleyStockCheckerBot():
         #
         # If chromedriver.exe is located somewhere other than the same directory
         # as this python file, then specify the location below.
-        self.browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
         
         try:
+            self.browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
             self.browser.get(website)
 
             # Wait for page to load to ensure newsletter popup comes up
@@ -75,9 +75,9 @@ class TRexStockCheckerBot():
         #
         # If chromedriver.exe is located somewhere other than the same directory
         # as this python file, then specify the location below.
-        self.browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
         
         try:
+            self.browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
             self.browser.get(website)
 
             # Wait for page to load to ensure newsletter popup comes up
@@ -138,11 +138,11 @@ while var == 1 :
     # dd/mm/YY H:M:S
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
     
-    bot = HaleyStockCheckerBot('https://haleystrategic.com/shop/soft-goods/chestrigs/d3crm-micro', **APPTOKEN**, **USER TOKEN**)
+    bot = HaleyStockCheckerBot('https://haleystrategic.com/shop/soft-goods/chestrigs/d3crm-micro',  **APPTOKEN**, **USER TOKEN**)
 
     time.sleep(3)
 
-    bot = TRexStockCheckerBot('https://www.trex-arms.com/store/t-rex-arms-orion/', **APPTOKEN**, **USER TOKEN**)
+    bot = TRexStockCheckerBot('https://www.trex-arms.com/store/t-rex-arms-orion/',  **APPTOKEN**, **USER TOKEN**)
     
     # Delay next try by pseudo-random time
     time.sleep(randDelay)
