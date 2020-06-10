@@ -14,118 +14,117 @@ from datetime import datetime
 import http.client
 import urllib
 
-class HaleyStockCheckerBot():
-    def __init__(self, website, appToken, userToken):
-        # If webdriver.Chrome() throws an error, then that means you need to install
-        # Chrome Driver from: http://chromedriver.chromium.org/downloads
-        # Make sure to select the correct version
-        #
-        # If chromedriver.exe is located somewhere other than the same directory
-        # as this python file, then specify the location below.
+def sendPushover(appToken, userToken, messageToSend):
+    # Send Pushover notification
+    conn = http.client.HTTPSConnection("api.pushover.net:443")
+    conn.request("POST", "/1/messages.json",
+        urllib.parse.urlencode({
+            "token": appToken,
+            "user": userToken,
+            "message": messageToSend,
+        }), { "Content-type": "application/x-www-form-urlencoded" })
+    conn.getresponse()
+
+def checkHaleyStock(website, appToken, userToken):
+    # If webdriver.Chrome() throws an error, then that means you need to install
+    # Chrome Driver from: http://chromedriver.chromium.org/downloads
+    # Make sure to select the correct version
+    #
+    # If chromedriver.exe is located somewhere other than the same directory
+    # as this python file, then specify the location below.
         
-        try:
-            self.browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
-            self.browser.get(website)
+    try:
+        browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
+        browser.get(website)
 
-            # Wait for page to load to ensure newsletter popup comes up
-            time.sleep(3)
+        # Wait for page to load to ensure newsletter popup comes up
+        time.sleep(2)
 
-            # Press ESC key to click out of newsletter popup
-            ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+        # Press ESC key to click out of newsletter popup
+        ActionChains(browser).send_keys(Keys.ESCAPE).perform()
 
-            # Check to see which models are missing the 'out-of-stock' class name
-            inStock = self.browser.find_elements_by_xpath('//div[@class="swatch-option__wrapper"]')
-            #inStock = self.browser.find_elements_by_class_name('swatch-option__wrapper')
+        #time.sleep(2)
 
-            if len(inStock) > 0:
-                modelsInStock = []
-                
-                # Create list of models that are in stock
-                for model in inStock:
-                    modelsInStock.append(model.text)
-                    print("Haley " + dt_string + " (" + randDelayStr + ") : " + modelsInStock)
-                
-                # Send Pushover notification
-                conn = http.client.HTTPSConnection("api.pushover.net:443")
-                conn.request("POST", "/1/messages.json",
-                    urllib.parse.urlencode({
-                        "token": appToken,
-                        "user": userToken,
-                        "message": modelsInStock,
-                    }), { "Content-type": "application/x-www-form-urlencoded" })
-                conn.getresponse()
-            else:
-                print("Haley " + dt_string + " (" + randDelayStr + ") : Out of Stock")
+        # Check to see which models are missing the 'out-of-stock' class name
+        inStock = browser.find_elements_by_xpath('//div[@class="swatch-option__wrapper"]')
+        #inStock = browser.find_elements_by_class_name('swatch-option__wrapper')
+
+        if len(inStock) > 0:
+            modelsInStock = []
+
+            # Create list of models that are in stock
+            for model in inStock:
+                modelsInStock.append(model.text)
             
-
-        except Exception as e:
-            print("Oops!", e.__class__, "occurred.")
-            print("Moving on..")
-            print()
-
-        finally:
-            # Close browser when done
-            self.browser.quit()
-
-class TRexStockCheckerBot():
-    def __init__(self, website, appToken, userToken):
-        # If webdriver.Chrome() throws an error, then that means you need to install
-        # Chrome Driver from: http://chromedriver.chromium.org/downloads
-        # Make sure to select the correct version
-        #
-        # If chromedriver.exe is located somewhere other than the same directory
-        # as this python file, then specify the location below.
+            print("Haley " + dt_string + " (" + randDelayStr + ") : ")
+            print(*modelsInStock, sep = ", ")
+            sendPushover(appToken, userToken, modelsInStock)
+            
+        else:
+            print("Haley " + dt_string + " (" + randDelayStr + ") : Out of Stock")
         
-        try:
-            self.browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
-            self.browser.get(website)
 
-            # Wait for page to load to ensure newsletter popup comes up
-            time.sleep(3)
+    except Exception as e:
+        print("Oops!", e.__class__, "occurred.")
+        print("Moving on..")
+        print()
+        sendPushover(appToken, userToken, "Haley site failed to load.")
 
-            # Select color from dropdown
-            dropdownColor = Select(self.browser.find_element_by_id("pa_Color")) 
-            #print([o.text for o in dropdownColor.options])
-            dropdownColor.select_by_visible_text("Ranger")
+    finally:
+        # Close browser when done
+        browser.quit()
 
-            time.sleep(2)
 
-            # Select size from dropdown
-            dropdownSize = Select(self.browser.find_element_by_id("pa_Size")) 
-            #print([o.text for o in dropdownSize.options])
-            dropdownSize.select_by_visible_text("Medium")
+def checkTRexStock(website, appToken, userToken):
+    # If webdriver.Chrome() throws an error, then that means you need to install
+    # Chrome Driver from: http://chromedriver.chromium.org/downloads
+    # Make sure to select the correct version
+    #
+    # If chromedriver.exe is located somewhere other than the same directory
+    # as this python file, then specify the location below.
+    
+    try:
+        browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
+        browser.get(website)
 
-            time.sleep(2)
+        # Wait for page to load to ensure newsletter popup comes up
+        time.sleep(3)
 
-            # See if selected color and size are in stock
-            inStock = self.browser.find_element_by_xpath('//div[contains(@class, "woocommerce-variation-availability")]').text
-            #inStock = self.browser.find_elements_by_class_name('swatch-option__wrapper')
-            #print(inStock)
+        # Select color from dropdown
+        dropdownColor = Select(browser.find_element_by_id("pa_Color")) 
+        #print([o.text for o in dropdownColor.options])
+        dropdownColor.select_by_visible_text("Ranger")
 
-            if inStock == "Out of stock":
-                print("T-Rex " + dt_string + " (" + randDelayStr + ") : Out of Stock")
-                
-            else:
-                print("T-Rex " + dt_string + " (" + randDelayStr + ") : In Stock!")
+        time.sleep(2)
 
-                # Send Pushover notification
-                conn = http.client.HTTPSConnection("api.pushover.net:443")
-                conn.request("POST", "/1/messages.json",
-                    urllib.parse.urlencode({
-                        "token": appToken,
-                        "user": userToken,
-                        "message": "Orion belt in stock!",
-                    }), { "Content-type": "application/x-www-form-urlencoded" })
-                conn.getresponse()
+        # Select size from dropdown
+        dropdownSize = Select(browser.find_element_by_id("pa_Size")) 
+        #print([o.text for o in dropdownSize.options])
+        dropdownSize.select_by_visible_text("Medium")
 
-        except Exception as e:
-            print("Oops!", e.__class__, "occurred.")
-            print("Moving on..")
-            print()
+        time.sleep(2)
 
-        finally:
-            # Close browser when done
-            self.browser.quit()
+        # See if selected color and size are in stock
+        inStock = browser.find_element_by_xpath('//div[contains(@class, "woocommerce-variation-availability")]').text
+        #inStock = browser.find_elements_by_class_name('swatch-option__wrapper')
+        #print(inStock)
+
+        if inStock == "Out of stock":
+            print("T-Rex " + dt_string + " (" + randDelayStr + ") : Out of Stock")
+            
+        else:
+            print("T-Rex " + dt_string + " (" + randDelayStr + ") : In Stock!")
+            sendPushover(appToken, userToken, "Orion belt in stock!")
+
+    except Exception as e:
+        print("Oops!", e.__class__, "occurred.")
+        print("Moving on..")
+        print()
+        sendPushover(appToken, userToken, "TRex Arms site failed to load.")
+
+    finally:
+        # Close browser when done
+        browser.quit()
 
 var = 1
 
@@ -138,11 +137,11 @@ while var == 1 :
     # dd/mm/YY H:M:S
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
     
-    bot = HaleyStockCheckerBot('https://haleystrategic.com/shop/soft-goods/chestrigs/d3crm-micro',  **APPTOKEN**, **USER TOKEN**)
+    checkHaleyStock('https://haleystrategic.com/shop/soft-goods/chestrigs/d3crm-micro', **APPTOKEN**, **USER TOKEN**)
 
     time.sleep(3)
 
-    bot = TRexStockCheckerBot('https://www.trex-arms.com/store/t-rex-arms-orion/',  **APPTOKEN**, **USER TOKEN**)
+    checkTRexStock('https://www.trex-arms.com/store/t-rex-arms-orion/', **APPTOKEN**, **USER TOKEN**)
     
     # Delay next try by pseudo-random time
     time.sleep(randDelay)
