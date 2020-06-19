@@ -13,6 +13,20 @@ import random
 from datetime import datetime
 import http.client
 import urllib
+import sys
+
+
+try:
+    minIntervalArg = sys.argv[1]
+    maxIntervalArg = sys.argv[2]
+except IndexError:
+    raise SystemExit(f"Usage: {sys.argv[0]} <min interval in seconds> <max interval in seconds>")
+
+
+def Diff(li1, li2): 
+    # Python code to get difference of two lists 
+    # Using set() 
+    return (list(set(li1) - set(li2))) 
 
 def sendPushover(appToken, userToken, messageToSend):
     # Send Pushover notification
@@ -95,17 +109,22 @@ def checkHaleySMGStock(website, productSKU, appToken, userToken):
         # Press ESC key to click out of newsletter popup
         ActionChains(browser).send_keys(Keys.ESCAPE).perform()
 
-        # Check to see if it has two Out of Stock elements which would indicate it's out of stock
-        outOfStockElements = browser.find_elements_by_xpath('//form[@data-product-sku="' + productSKU + '"]//div[@class="addon-product__out_of_stock"]')
-        
-        if len(outOfStockElements) < 2:      
-            pushoverText = productSKU + " is in stock :)))"      
-            print("Haley " + datetime_string + " (" + randDelayStr + ") : " + pushoverText)
-            sendPushover(appToken, userToken, pushoverText)
+        try:
+            # Check to see if it has two Out of Stock elements which would indicate it's out of stock
+            #addToCartButton = browser.find_elements_by_xpath('//form[@data-product-sku="' + productSKU + '"]//div[@class="addon-product__out_of_stock"]')
+            addToCartButton = browser.find_element_by_xpath('//div[contains(@class, "hs-input__add-to-cart")]').text
+
+            if addToCartButton:      
+                pushoverText = productSKU + " is in stock :)))"      
+                print("Haley " + datetime_string + " (" + randDelayStr + ") : " + pushoverText)
+                sendPushover(appToken, userToken, pushoverText)
+                
+            else:
+                print("Haley " + datetime_string + " (" + randDelayStr + ") : Out of Stock")
+
+        except Exception:
+            print("Haley " + datetime_string + " (" + randDelayStr + ") : Out of Stock")
             
-        else:
-            print("Haley " + datetime_string + " (" + randDelayStr + ") : " + productSKU + " is out of stock :(")
-        
 
     except Exception as e:
         print("Oops!", e.__class__, "occurred.")
@@ -164,11 +183,58 @@ def checkTRexStock(website, appToken, userToken):
         # Close browser when done
         browser.quit()
 
+def checkCoyoteStock(website, listOfPreviousItems, appToken, userToken):
+    # If webdriver.Chrome() throws an error, then that means you need to install
+    # Chrome Driver from: http://chromedriver.chromium.org/downloads
+    # Make sure to select the correct version
+    #
+    # If chromedriver.exe is located somewhere other than the same directory
+    # as this python file, then specify the location below.
+    
+    try:
+        browser = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
+        browser.get(website)
+
+        # Wait for page to load to ensure newsletter popup comes up
+        time.sleep(3)
+
+        # See if selected color and size are in stock
+        itemsFound = browser.find_elements_by_xpath('//span[@class="ProductName"]')
+
+        listOfCurrentItems = []
+
+        # Create list of models that are in stock
+        for item in itemsFound:
+            listOfCurrentItems.append(item.text)
+
+        newItems = Diff(listOfCurrentItems, listOfPreviousItems)
+
+        if newItems:
+            print("Coyote " + datetime_string + " (" + randDelayStr + ") : ")
+            print(*newItems, sep = ", ")
+            sendPushover(appToken, userToken, newItems)
+            
+        else:
+            print("Coyote " + datetime_string + " (" + randDelayStr + ") : No change")
+
+    except Exception as e:
+        print("Oops!", e.__class__, "occurred.")
+        print("Moving on..")
+        print()
+        sendPushover(appToken, userToken, "Coyote site failed to load.")
+
+    finally:
+        # Close browser when done
+        browser.quit()
+        return listOfCurrentItems
+
 var = 1
 
+listOfPreviousItems = []
+
 while var == 1 :
-    # Generate a random number within a range
-    randDelay = random.randint(600,1200)
+    # Generate a random number within a range of values specified in command line arguments
+    randDelay = random.randint(int(minIntervalArg),int(maxIntervalArg))
     randDelayStr = str(int(round(randDelay/60))) + "mins"
     
     now = datetime.now()
@@ -179,11 +245,15 @@ while var == 1 :
 
     #time.sleep(3)
 
-    checkHaleySMGStock('https://haleystrategic.com/shop/soft-goods/chestrigs/d3crm-micro', "MINSERTSMG-BLK", **APPTOKEN**, **USER TOKEN**)
+    checkHaleySMGStock('https://haleystrategic.com/shop/soft-goods/accessories/micro-smg-insert-black', "MINSERTSMG-BLK", **APPTOKEN**, **USER TOKEN**)
 
     time.sleep(3)
 
     checkTRexStock('https://www.trex-arms.com/store/t-rex-arms-orion/', **APPTOKEN**, **USER TOKEN**)
+
+    time.sleep(3)
+
+    listOfPreviousItems = checkCoyoteStock('http://www.coyotetacticalsolutions.com/pouches/', listOfPreviousItems, **APPTOKEN**, **USER TOKEN**)
     
     # Delay next try by pseudo-random time
     time.sleep(randDelay)
